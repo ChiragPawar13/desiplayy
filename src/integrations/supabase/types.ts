@@ -14,7 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      room_chats: {
+        Row: {
+          created_at: string
+          id: string
+          room_id: string
+          sender_id: string
+          sender_name: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          room_id: string
+          sender_id: string
+          sender_name: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          room_id?: string
+          sender_id?: string
+          sender_name?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_chats_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          game_id: string
+          game_state: Json | null
+          host_id: string
+          id: string
+          players: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          game_id: string
+          game_state?: Json | null
+          host_id: string
+          id?: string
+          players?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          game_id?: string
+          game_state?: Json | null
+          host_id?: string
+          id?: string
+          players?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
