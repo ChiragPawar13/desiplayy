@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   Crown,
   Dices,
@@ -63,9 +64,12 @@ function Index() {
             </div>
             <span className="font-bold text-xl tracking-tight">DesiPlay</span>
           </div>
-          <button className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-sm font-medium border border-white/10">
+          <Link
+            to="/auth"
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-sm font-medium border border-white/10"
+          >
             Sign in
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -81,6 +85,20 @@ function Index() {
         <p className="mt-6 text-lg text-white/60 max-w-xl mx-auto">
           Raja Mantri, Housie, Desi UNO and more — the games you grew up with, ready to play in your browser.
         </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/auth"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold shadow-lg transition"
+          >
+            Sign in to play
+          </Link>
+          <Link
+            to="/dashboard"
+            className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-medium transition"
+          >
+            Go to lobby
+          </Link>
+        </div>
       </section>
 
       {/* Games grid */}
