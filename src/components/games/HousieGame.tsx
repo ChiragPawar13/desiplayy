@@ -76,7 +76,7 @@ export function HousieGame({ room, user }: { room: RoomRow; user: User }) {
     if (!isHost) return;
     await replaceGameState(room.id, {
       boards: players.reduce((acc: Record<string, (number | "FREE")[]>, p) => ({ ...acc, [p.uid]: generateHousieBoard() }), {}),
-      marked: players.reduce((acc: Record<string, (number | "FREE")[]>, p) => ({ ...acc, [p.uid]: ["FREE"] }), {}),
+      marked: players.reduce((acc: Record<string, (number | "FREE")[]>, p) => ({ ...acc, [p.uid]: ["FREE" as const] }), {}),
       calledNumbers: [],
       winner: null,
       lastCalled: null,
