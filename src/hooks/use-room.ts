@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { RoomRow } from "@/lib/room-helpers";
 
@@ -7,31 +7,32 @@ export function useRoom(code: string | undefined) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refetch = useCallback(async () => {
+    if (!code) return;
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("*")
+      .eq("code", code.toUpperCase())
+      .maybeSingle();
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    if (!data) {
+      setError("Room not found");
+      return;
+    }
+    setRoom(data as RoomRow);
+  }, [code]);
+
   useEffect(() => {
     if (!code) return;
     let active = true;
 
-    const load = async () => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("code", code.toUpperCase())
-        .maybeSingle();
-      if (!active) return;
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-      if (!data) {
-        setError("Room not found");
-        setLoading(false);
-        return;
-      }
-      setRoom(data as RoomRow);
-      setLoading(false);
-    };
-    load();
+    (async () => {
+      await refetch();
+      if (active) setLoading(false);
+    })();
 
     const channel = supabase
       .channel(`room-${code}`)
@@ -54,7 +55,7 @@ export function useRoom(code: string | undefined) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [code]);
+  }, [code, refetch]);
 
-  return { room, error, loading };
+  return { room, error, loading, refetch };
 }
