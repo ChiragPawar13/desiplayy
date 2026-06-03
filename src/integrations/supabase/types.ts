@@ -90,7 +90,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_room_member_by_code: { Args: { _code: string }; Returns: boolean }
+      is_room_member_by_id: { Args: { _room_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
