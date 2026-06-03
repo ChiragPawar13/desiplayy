@@ -21,7 +21,7 @@ function RoomPage() {
   const { code } = Route.useParams();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { room, error, loading } = useRoom(code);
+  const { room, error, loading, refetch } = useRoom(code);
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
@@ -113,7 +113,7 @@ function RoomPage() {
             </ul>
             {isHost && (
               <div className="flex flex-col sm:flex-row gap-2">
-                <button onClick={() => addBotToRoom(room).catch((e) => alert(e.message))} className="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 text-sm">
+                <button onClick={() => addBotToRoom(room).then(() => refetch()).catch((e) => alert(e.message))} className="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 text-sm">
                   <Plus size={16} /> Add Bot
                 </button>
                 <button onClick={handleStart} className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 text-sm">
