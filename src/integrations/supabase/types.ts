@@ -92,6 +92,26 @@ export type Database = {
     Functions: {
       is_room_member_by_code: { Args: { _code: string }; Returns: boolean }
       is_room_member_by_id: { Args: { _room_id: string }; Returns: boolean }
+      join_room_by_code: {
+        Args: { _code: string }
+        Returns: {
+          code: string
+          created_at: string
+          game_id: string
+          game_state: Json | null
+          host_id: string
+          id: string
+          players: Json
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rooms"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
