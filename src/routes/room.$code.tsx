@@ -23,31 +23,33 @@ function RoomPage() {
   const navigate = useNavigate();
   const { room, error, loading, refetch } = useRoom(code);
   const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth", replace: true });
   }, [authLoading, user, navigate]);
 
-  // Auto-join if not in the room yet
+  // Auto-join if not in the room yet (RLS hides rooms from non-members,
+  // so we attempt join whenever we can't see the room or aren't listed in it).
   useEffect(() => {
-    if (!user || !room || joining) return;
-    if (room.status !== "waiting") return;
-    const inRoom = room.players.some((p) => p.uid === user.id);
-    if (!inRoom) {
-      setJoining(true);
-      joinRoomByCode(code, { uid: user.id, name: displayNameOf(user) })
-        .catch(() => navigate({ to: "/dashboard", replace: true }))
-        .finally(() => setJoining(false));
-    }
-  }, [user, room, code, navigate, joining]);
+    if (!user || loading || joining) return;
+    const inRoom = room?.players.some((p) => p.uid === user.id) ?? false;
+    if (room && inRoom) return;
+    if (room && room.status !== "waiting" && !inRoom) return;
+    setJoining(true);
+    joinRoomByCode(code, { uid: user.id, name: displayNameOf(user) })
+      .then(() => refetch())
+      .catch((e) => setJoinError(e instanceof Error ? e.message : "Failed to join"))
+      .finally(() => setJoining(false));
+  }, [user, room, code, loading, joining, refetch]);
 
-  if (authLoading || loading) {
+  if (authLoading || loading || joining) {
     return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading room…</div>;
   }
-  if (error || !room || !user) {
+  if (joinError || !user || !room) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 gap-4">
-        <p className="text-rose-400">{error || "Room not found"}</p>
+        <p className="text-rose-400">{joinError || error || "Room not found"}</p>
         <Link to="/dashboard" className="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-xl font-bold">Back to Dashboard</Link>
       </div>
     );
