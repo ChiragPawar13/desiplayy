@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "DesiPlay" },
+      { name: "description", content: "DesiPlay is a web application that hosts and plays games." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "DesiPlay" },
+      { property: "og:description", content: "DesiPlay is a web application that hosts and plays games." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "DesiPlay" },
+      { name: "twitter:description", content: "DesiPlay is a web application that hosts and plays games." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/dc3b0843-f0de-4693-87fb-208ec6133b85/id-preview-cf868109--12ed923f-f6dc-4995-bac5-43c98995de61.lovable.app-1780479242083.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/dc3b0843-f0de-4693-87fb-208ec6133b85/id-preview-cf868109--12ed923f-f6dc-4995-bac5-43c98995de61.lovable.app-1780479242083.png" },
     ],
     links: [
       {
