@@ -39,27 +39,20 @@ export async function createRoom(gameId: string, me: Player): Promise<string> {
 
 export async function joinRoomByCode(code: string, me: Player): Promise<RoomRow> {
   const upper = code.toUpperCase().trim();
-  const { data: room, error } = await supabase
-    .from("rooms")
-    .select("*")
-    .eq("code", upper)
-    .maybeSingle();
-  if (error) throw error;
-  if (!room) throw new Error("Room does not exist!");
-  if (room.status !== "waiting") throw new Error("Game already started!");
-
-  const players = (room.players as Player[]) || [];
+  void me; // identity is taken from auth.uid() server-side
+  const { data, error } = await supabase.rpc("join_room_by_code", { _code: upper });
+  if (error) {
+    const msg = error.message || "Failed to join room";
+    if (/does not exist/i.test(msg)) throw new Error("Room does not exist!");
+    if (/already started/i.test(msg)) throw new Error("Game already started!");
+    if (/full/i.test(msg)) throw new Error("Room is full!");
+    throw new Error(msg);
+  }
+  if (!data) throw new Error("Room does not exist!");
+  const room = data as RoomRow;
   const limit = getPlayerLimit(room.game_id);
-  if (players.find((p) => p.uid === me.uid)) return room as RoomRow;
-  if (players.length >= limit) throw new Error("Room is full!");
-
-  const newPlayers = [...players, me];
-  const { error: upErr } = await supabase
-    .from("rooms")
-    .update({ players: newPlayers })
-    .eq("id", room.id);
-  if (upErr) throw upErr;
-  return { ...(room as RoomRow), players: newPlayers };
+  if ((room.players?.length ?? 0) > limit) throw new Error("Room is full!");
+  return room;
 }
 
 export async function addBotToRoom(room: RoomRow): Promise<void> {
