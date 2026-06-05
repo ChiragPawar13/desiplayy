@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Mikado (Pick-up Sticks)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js for 3D Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for Cam navigation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Canvas Confetti for celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            user-select: none;
+            overflow: hidden;
+        }
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+        /* Keyframe animations */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.03); }
+        }
+        .pulse-highlight {
+            animation: pulse-soft 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="w-full h-screen text-slate-100 flex flex-col justify-between">
+
+    <!-- MAIN MENU OVERLAY -->
+    <div id="main-menu" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 transition-all duration-500">
+        <div class="max-w-md w-full glass rounded-3xl p-8 shadow-2xl border border-amber-500/20 text-center flex flex-col justify-between max-h-[90vh] overflow-y-auto">
+            <div>
+                <div class="flex justify-center mb-2">
+                    <span class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 font-outfit tracking-wider">MIKADO 3D</span>
+                </div>
+                <p class="text-xs text-amber-400/80 uppercase tracking-widest font-semibold mb-6">The Art of Pick-Up Sticks</p>
+                
+                <!-- Game Description -->
+                <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                    Test your patience and precision! Pick up the sticks one by one from the wooden table. Touching or moving another stick will pass the turn.
+                </p>
+
+                <!-- Mode Select Grid -->
+                <div class="grid grid-cols-1 gap-3 mb-6">
+                    <button onclick="selectMode('solo')" class="mode-btn group relative flex items-center p-4 bg-slate-800/80 hover:bg-amber-500/10 border border-slate-700 hover:border-amber-500/40 rounded-2xl transition-all duration-300 text-left">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 text-xl mr-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-100">Solo Practice</div>
+                            <div class="text-xs text-slate-400">Clear all sticks with up to 3 errors.</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectMode('vs_friend')" class="mode-btn group relative flex items-center p-4 bg-slate-800/80 hover:bg-orange-500/10 border border-slate-700 hover:border-orange-500/40 rounded-2xl transition-all duration-300 text-left">
+                        <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 text-xl mr-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-100">Pass & Play (Local Friend)</div>
+                            <div class="text-xs text-slate-400">Take turns with a friend side-by-side.</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectMode('vs_bot')" class="mode-btn group relative flex items-center p-4 bg-slate-800/80 hover:bg-blue-500/10 border border-slate-700 hover:border-blue-500/40 rounded-2xl transition-all duration-300 text-left">
+                        <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl mr-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-100">Play vs Bot AI</div>
+                            <div class="text-xs text-slate-400">Play against our mathematical virtual bot.</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Bot Difficulty (hidden by default) -->
+                <div id="difficulty-panel" class="hidden mb-6 animate-fade-in">
+                    <label class="block text-left text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bot Difficulty</label>
+                    <div class="grid grid-cols-3 gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800">
+                        <button onclick="setBotDifficulty('easy')" id="diff-easy" class="py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 transition">Easy</button>
+                        <button onclick="setBotDifficulty('medium')" id="diff-medium" class="py-2 px-3 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 shadow-md font-bold transition">Medium</button>
+                        <button onclick="setBotDifficulty('hard')" id="diff-hard" class="py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 transition">Hard</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start Game Trigger -->
+            <div>
+                <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-outfit font-bold text-lg rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-orange-400/30 transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
+                    <i class="fa-solid fa-play mr-2"></i> Drop & Start
+                </button>
+                <button onclick="toggleHowToPlay(true)" class="mt-3 text-xs text-slate-400 hover:text-amber-400 transition">
+                    <i class="fa-solid fa-circle-question mr-1"></i> How to Play & Points Legend
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP GAME BAR / HUD -->
+    <div class="fixed top-0 inset-x-0 p-4 z-40 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pointer-events-none">
+        
+        <!-- Left Side: Controls & Scoreboard Info -->
+        <div class="flex items-center gap-3 pointer-events-auto">
+            <button onclick="quitToMenu()" class="glass hover:bg-slate-800/80 px-4 py-2.5 rounded-2xl flex items-center gap-2 text-sm font-semibold transition border border-white/5 shadow-md">
+                <i class="fa-solid fa-arrow-left text-amber-500"></i> Menu
+            </button>
+            <button onclick="resetStickPile()" class="glass hover:bg-slate-800/80 px-4 py-2.5 rounded-2xl flex items-center gap-2 text-sm font-semibold transition border border-white/5 shadow-md">
+                <i class="fa-solid fa-rotate-right text-amber-500 animate-spin-hover"></i> Redrop
+            </button>
+        </div>
+
+        <!-- Center Turn Indicator (Main message area) -->
+        <div id="game-status-bubble" class="mx-auto md:mx-0 glass px-6 py-3 rounded-2xl border border-amber-500/30 flex items-center gap-3 shadow-xl pointer-events-auto min-w-[240px] justify-center">
+            <span class="w-3 h-3 rounded-full bg-amber-500 animate-ping"></span>
+            <span id="turn-announcement" class="font-outfit font-bold tracking-wide text-slate-100">Preparing...</span>
+        </div>
+
+        <!-- Right Side: Scores & Stats Tracker -->
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end pointer-events-auto">
+            <!-- Dynamic Score displays -->
+            <div id="hud-score-container" class="flex gap-2">
+                <!-- Solo / P1 Card -->
+                <div class="glass px-4 py-2 rounded-2xl border border-white/5 shadow-md flex flex-col items-center min-w-[80px]">
+                    <span id="p1-label" class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Player 1</span>
+                    <span id="p1-score" class="text-xl font-black font-outfit text-amber-400">0</span>
+                </div>
+                <!-- P2 / Bot Card (only active in multi/bot) -->
+                <div id="p2-score-card" class="glass px-4 py-2 rounded-2xl border border-white/5 shadow-md flex flex-col items-center min-w-[80px] hidden">
+                    <span id="p2-label" class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Player 2</span>
+                    <span id="p2-score" class="text-xl font-black font-outfit text-blue-400">0</span>
+                </div>
+                <!-- Solo Mistakes Limit -->
+                <div id="solo-mistakes-card" class="glass px-4 py-2 rounded-2xl border border-white/5 shadow-md flex flex-col items-center">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Strikes</span>
+                    <div id="strikes-display" class="flex gap-1 mt-1 text-red-500 text-xs">
+                        <i class="fa-regular fa-circle"></i>
+                        <i class="fa-regular fa-circle"></i>
+                        <i class="fa-regular fa-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEGEND / POINTS GLANCE (Bottom Left) -->
+    <div class="fixed bottom-4 left-4 z-40 max-w-xs pointer-events-auto hidden md:block">
+        <div class="glass p-4 rounded-2xl border border-white/5 shadow-lg">
+            <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2 font-outfit"><i class="fa-solid fa-tags mr-1"></i> Sticks Point Values</h4>
+            <div class="space-y-1 text-xs">
+                <div class="flex justify-between items-center bg-slate-900/40 p-1.5 rounded">
+                    <span class="flex items-center gap-2"><span class="w-5 h-1.5 bg-blue-500 rounded"></span> Spiral/Mikado</span>
+                    <span class="font-bold text-amber-400">20 pts (x1)</span>
+                </div>
+                <div class="flex justify-between items-center bg-slate-900/40 p-1.5 rounded">
+                    <span class="flex items-center gap-2"><span class="w-5 h-1.5 bg-yellow-400 rounded"></span> Mandarin</span>
+                    <span class="font-bold text-amber-400">10 pts (x5)</span>
+                </div>
+                <div class="flex justify-between items-center bg-slate-900/40 p-1.5 rounded">
+                    <span class="flex items-center gap-2"><span class="w-5 h-1.5 bg-emerald-500 rounded"></span> Bonzen</span>
+                    <span class="font-bold text-amber-400">5 pts (x5)</span>
+                </div>
+                <div class="flex justify-between items-center bg-slate-900/40 p-1.5 rounded">
+                    <span class="flex items-center gap-2"><span class="w-5 h-1.5 bg-red-500 rounded"></span> Samurai</span>
+                    <span class="font-bold text-amber-400">3 pts (x10)</span>
+                </div>
+                <div class="flex justify-between items-center bg-slate-900/40 p-1.5 rounded">
+                    <span class="flex items-center gap-2"><span class="w-5 h-1.5 bg-orange-500 rounded"></span> Kuli</span>
+                    <span class="font-bold text-amber-400">2 pts (x10)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN 3D CANVAS CONTAINER -->
+    <div id="canvas-container" class="w-full h-full absolute inset-0 z-10 cursor-pointer"></div>
+
+    <!-- INSTRUCTION OVERLAY / "HOW TO PLAY" MODAL -->
+    <div id="howto-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 transition-all duration-300 hidden">
+        <div class="max-w-md w-full glass rounded-3xl p-6 shadow-2xl border border-amber-500/20 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold font-outfit text-amber-400">How to Play Mikado</h3>
+                <button onclick="toggleHowToPlay(false)" class="text-slate-400 hover:text-slate-100"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1"><i class="fa-solid fa-mouse mr-1"></i> Interactive Camera</h4>
+                    <p>Drag your left mouse button (or swipe on touch screen) to rotate the camera. Use zoom or right-click drag to pan. Look carefully from different angles to spot overlapping sticks!</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1"><i class="fa-solid fa-hand-pointer mr-1"></i> Picking a Stick</h4>
+                    <p>Simply click or tap a stick to pick it up. If there are other sticks resting on top of it, they will shake/disturb and your pick will fail.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1"><i class="fa-solid fa-scale-balanced mr-1"></i> Rules of Turn</h4>
+                    <p>In <strong>Solo Mode</strong>, any failed pick scores a "strike". 3 strikes and the game ends. In <strong>Pass & Play or Bot modes</strong>, failing a pick transfers the turn instantly to the opponent, while a successful pick awards points and grants you another turn.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-200 mb-1"><i class="fa-solid fa-trophy mr-1"></i> Game End</h4>
+                    <p>The game finishes when all 31 sticks are picked. The player with the highest total points wins!</p>
+                </div>
+            </div>
+            <button onclick="toggleHowToPlay(false)" class="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition">Got it, Let's Play!</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="game-over-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 transition-all duration-500 hidden">
+        <div class="max-w-md w-full glass rounded-3xl p-8 shadow-2xl border border-red-500/20 text-center flex flex-col justify-between">
+            <div>
+                <div class="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+                    <i class="fa-solid fa-trophy text-4xl text-amber-400"></i>
+                </div>
+                <h2 id="go-title" class="text-3xl font-extrabold font-outfit text-amber-400 tracking-wide mb-2">Game Over</h2>
+                <p id="go-subtitle" class="text-slate-300 text-sm mb-6">Here's how the game turned out:</p>
+
+                <!-- Final Scores Summary -->
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-3 mb-6">
+                    <div class="flex justify-between items-center">
+                        <span id="go-p1-name" class="font-semibold text-slate-400">Player 1</span>
+                        <span id="go-p1-score" class="font-black text-2xl text-amber-400">0</span>
+                    </div>
+                    <div id="go-p2-row" class="flex justify-between items-center border-t border-slate-800 pt-3 hidden">
+                        <span id="go-p2-name" class="font-semibold text-slate-400">Player 2</span>
+                        <span id="go-p2-score" class="font-black text-2xl text-blue-400">0</span>
+                    </div>
+                </div>
+
+                <div id="go-verdict" class="text-lg font-bold font-outfit text-slate-200 mb-6"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="resetGame()" class="py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-orange-500/20">Play Again</button>
+                <button onclick="quitToMenu()" class="py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let currentMode = 'solo'; // solo, vs_friend, vs_bot
+        let botDifficulty = 'medium'; // easy, medium, hard
+        let currentPlayer = 1; // 1 or 2
+        let scores = { player1: 0, player2: 0 };
+        let soloStrikes = 0;
+        const MAX_SOLO_STRIKES = 3;
+        let gameActive = false;
+        let botThinking = false;
+
+        // Stick classification & color codes
+        const STICK_TYPES = {
+            MIKADO:  { points: 20, count: 1,  color: '#3b82f6', stripeColor: '#ffffff', radius: 0.045, label: 'Mikado' },  // Blue
+            MANDARIN:{ points: 10, count: 5,  color: '#fbbf24', stripeColor: '#ef4444', radius: 0.04,  label: 'Mandarin' },// Yellow/Red
+            BONZEN:  { points: 5,  count: 5,  color: '#10b981', stripeColor: '#3b82f6', radius: 0.04,  label: 'Bonzen' },  // Green/Blue
+            SAMURAI: { points: 3,  count: 10, color: '#ef4444', stripeColor: '#fbbf24', radius: 0.035, label: 'Samurai' }, // Red/Yellow
+            KULI:    { points: 2,  count: 10, color: '#f97316', stripeColor: '#3b82f6', radius: 0.035, label: 'Kuli' }     // Orange/Blue
+        };
+
+        // 3D Scene Variables
+        let scene, camera, renderer, controls;
+        let sticksArray = []; // List of custom stick objects
+        let tablePlane;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let audioCtx = null;
+
+        // Audio helper to create elegant retro tone synthesizers without external dependencies
+        function playSound(type) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'drop') {
+                    // Quick high-to-low click representing sliding/scattering sticks
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'success') {
+                    // Beautiful chiming double tone
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    gainNode.gain.setValueAtTime(0.12, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                } else if (type === 'fail') {
+                    // Solid short friction buzz for disturbed sticks
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.linearRampToValueAtTime(80, now + 0.25);
+                    gainNode.gain.setValueAtTime(0.1, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'tick') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(330, now);
+                    gainNode.gain.setValueAtTime(0.05, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                }
+            } catch (err) {
+                console.warn('Audio play block context', err);
+            }
+        }
+
+        // Initialize 3D Engine
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            
+            // Create Scene & Camera
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#111827');
+            scene.fog = new THREE.FogExp2('#111827', 0.05);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 10, 13);
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Controls Setup
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2.1; // Don't allow camera to go below table level
+            controls.minDistance = 3;
+            controls.maxDistance = 25;
+            controls.target.set(0, 1.2, 0);
+
+            // Light up the room
+            setupLights();
+
+            // Build Room Environment
+            buildEnvironment();
+
+            // Window Resizing
+            window.addEventListener('resize', onWindowResize);
+
+            // Mouse & Touch Raycasting Interactions
+            container.addEventListener('pointerdown', onPointerDown);
+
+            // Core Animation loop
+            animate();
+        }
+
+        function setupLights() {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            // Warm key directional light casting beautiful shadows
+            const dirLight = new THREE.DirectionalLight(0xfff6e0, 1.2);
+            dirLight.position.set(6, 12, 5);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 25;
+            const d = 8;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+
+            // Warm rim light
+            const pointLight = new THREE.PointLight(0xff8533, 0.7, 15);
+            pointLight.position.set(-6, 4, -4);
+            scene.add(pointLight);
+
+            // Soft blue bounce light from floor/sky
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+            scene.add(hemiLight);
+        }
+
+        // Procedural Textures to avoid dependency on static URLs
+        function createWoodTexture(color1, color2) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // Fill base warm brown
+            ctx.fillStyle = color1;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Procedural grain lines
+            ctx.fillStyle = color2;
+            for (let i = 0; i < 60; i++) {
+                const y = Math.random() * 512;
+                const h = 2 + Math.random() * 6;
+                ctx.fillRect(0, y, 512, h);
+            }
+
+            // Create circular rings / knots
+            ctx.strokeStyle = color2;
+            ctx.lineWidth = 1;
+            for (let k = 0; k < 4; k++) {
+                const cx = Math.random() * 512;
+                const cy = Math.random() * 512;
+                const rMax = 100 + Math.random() * 150;
+                for (let r = 10; r < rMax; r += 15) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            // Soft noise blur
+            ctx.fillStyle = 'rgba(0,0,0,0.03)';
+            for (let j = 0; j < 5000; j++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                ctx.fillRect(x, y, 1, 1);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 1);
+            return texture;
+        }
+
+        function createStripedTexture(baseColor, stripeColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(0, 0, 128, 128);
+
+            // Draw clean geometric bands
+            ctx.fillStyle = stripeColor;
+            ctx.fillRect(16, 0, 16, 128);
+            ctx.fillRect(48, 0, 8, 128);
+            ctx.fillRect(64, 0, 8, 128);
+            ctx.fillRect(96, 0, 16, 128);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        function buildEnvironment() {
+            // FLOOR
+            const floorGeo = new THREE.PlaneGeometry(40, 40);
+            const floorWood = createWoodTexture('#1e1610', '#120d09');
+            floorWood.repeat.set(4, 4);
+            const floorMat = new THREE.MeshStandardMaterial({
+                map: floorWood,
+                roughness: 0.6,
+                metalness: 0.1
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // WALLS
+            const wallMat = new THREE.MeshStandardMaterial({ color: '#2c3540', roughness: 0.9 });
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), wallMat);
+            backWall.position.set(0, 10, -20);
+            scene.add(backWall);
+
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), wallMat);
+            leftWall.position.set(-20, 10, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            scene.add(leftWall);
+
+            // WINDOW GLOW MOCK UP
+            const windowFrame = new THREE.Mesh(new THREE.PlaneGeometry(8, 6), new THREE.MeshBasicMaterial({ color: '#ffb366' }));
+            windowFrame.position.set(-19.8, 8, -5);
+            windowFrame.rotation.y = Math.PI / 2;
+            scene.add(windowFrame);
+
+            // TABLE DESIGN
+            const tableGroup = new THREE.Group();
+            
+            // Large Wooden Tabletop
+            const tableTopGeo = new THREE.CylinderGeometry(4.5, 4.5, 0.25, 40);
+            const tableWood = createWoodTexture('#5c3a21', '#382213');
+            const tableTopMat = new THREE.MeshStandardMaterial({
+                map: tableWood,
+                roughness: 0.3,
+                metalness: 0.1
+            });
+            const tableTop = new THREE.Mesh(tableTopGeo, tableTopMat);
+            tableTop.position.y = 2.4;
+            tableTop.castShadow = true;
+            tableTop.receiveShadow = true;
+            tableGroup.add(tableTop);
+
+            // Decorative Table border
+            const rimGeo = new THREE.CylinderGeometry(4.6, 4.6, 0.1, 40);
+            const rimMat = new THREE.MeshStandardMaterial({ color: '#1a0d00', roughness: 0.2 });
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.position.y = 2.45;
+            tableGroup.add(rim);
+
+            // Heavy central leg pillar
+            const legPillarGeo = new THREE.CylinderGeometry(0.5, 0.7, 2.4, 20);
+            const legMat = new THREE.MeshStandardMaterial({ map: tableWood, roughness: 0.5 });
+            const legPillar = new THREE.Mesh(legPillarGeo, legMat);
+            legPillar.position.y = 1.2;
+            legPillar.castShadow = true;
+            legPillar.receiveShadow = true;
+            tableGroup.add(legPillar);
+
+            // Base support
+            const tableBaseGeo = new THREE.CylinderGeometry(1.5, 1.7, 0.15, 20);
+            const tableBase = new THREE.Mesh(tableBaseGeo, legMat);
+            tableBase.position.y = 0.075;
+            tableBase.castShadow = true;
+            tableGroup.add(tableBase);
+
+            scene.add(tableGroup);
+
+            // Cache table surface boundary
+            tablePlane = { y: 2.52, radius: 4.3 };
+        }
+
+        // Core 3D Line Segment to Line Segment Distance solver
+        // This calculates if sticks are physically touching each other, and which one rests on top.
+        function getSegmentDistance(P1, P2, Q1, Q2) {
+            const u = P2.clone().sub(P1);
+            const v = Q2.clone().sub(Q1);
+            const w = P1.clone().sub(Q1);
+            
+            const a = u.dot(u); // always >= 0
+            const b = u.dot(v);
+            const c = v.dot(v); // always >= 0
+            const d = u.dot(w);
+            const e = v.dot(w);
+            const D = a * c - b * b; // always >= 0
+            
+            let sc, tc;
+            
+            // if lines are parallel
+            if (D < 0.0000001) {
+                sc = 0.0;
+                tc = (b > c ? d / b : e / c);
+            } else {
+                sc = (b * e - c * d) / D;
+                tc = (a * e - b * d) / D;
+            }
+            
+            // Clamp factors to segment boundaries
+            if (sc < 0.0) sc = 0.0;
+            else if (sc > 1.0) sc = 1.0;
+            
+            if (tc < 0.0) tc = 0.0;
+            else if (tc > 1.0) tc = 1.0;
+            
+            // Nearest point on segment 1 & 2
+            const dS1 = P1.clone().add(u.multiplyScalar(sc));
+            const dS2 = Q1.clone().add(v.multiplyScalar(tc));
+            
+            // Euclidean distance
+            const dist = dS1.distanceTo(dS2);
+            
+            return {
+                distance: dist,
+                closestPointS1: dS1,
+                closestPointS2: dS2
+            };
+        }
+
+        // Generates initial 3D stick pile
+        function generateSticks() {
+            // Remove previous stick components from 3D space
+            sticksArray.forEach(stk => scene.remove(stk.mesh));
+            sticksArray = [];
+
+            let idCounter = 0;
+
+            // Generate full set of 31 Mikado Sticks
+            Object.keys(STICK_TYPES).forEach(key => {
+                const spec = STICK_TYPES[key];
+                
+                for (let n = 0; n < spec.count; n++) {
+                    const length = 3.6 + Math.random() * 0.4; // Average 3.8 units long
+                    const rad = spec.radius;
+
+                    // Build 3D mesh
+                    const stickGeo = new THREE.CylinderGeometry(rad, rad, length, 10);
+                    // Use striped procedural canvas mapping
+                    const stickMat = new THREE.MeshStandardMaterial({
+                        map: createStripedTexture(spec.color, spec.stripeColor),
+                        roughness: 0.35,
+                        metalness: 0.1
+                    });
+                    const stickMesh = new THREE.Mesh(stickGeo, stickMat);
+                    stickMesh.castShadow = true;
+                    stickMesh.receiveShadow = true;
+
+                    // Tag details on Three object
+                    stickMesh.userData = { id: idCounter };
+
+                    sticksArray.push({
+                        id: idCounter,
+                        typeKey: key,
+                        typeSpec: spec,
+                        length: length,
+                        radius: rad,
+                        mesh: stickMesh,
+                        // Positional math endpoints
+                        p1: new THREE.Vector3(),
+                        p2: new THREE.Vector3(),
+                        active: true
+                    });
+                    
+                    idCounter++;
+                }
+            });
+
+            // Perform organic drop pile simulation
+            simulateDrop();
+        }
+
+        // Procedurally stacks/scatters sticks realistically to make physical picking challenging.
+        function simulateDrop() {
+            // First pass: distribute sticks above table pointing randomly outwards
+            sticksArray.forEach((stk, index) => {
+                // Circular conical placement
+                const angle = (index / sticksArray.length) * Math.PI * 2 + (Math.random() * 0.5);
+                const tiltAngle = (0.05 + Math.random() * 0.25) * Math.PI; // low slope tilt
+                const dist = 0.5 + Math.random() * 1.5;
+
+                // Position center of gravity
+                const cx = Math.cos(angle) * dist;
+                const cy = tablePlane.y + 0.15 + (index * 0.09); // Layer them vertically
+                const cz = Math.sin(angle) * dist;
+                
+                stk.mesh.position.set(cx, cy, cz);
+
+                // Setup orientation rotation
+                const rotY = angle + Math.PI / 2 + (Math.random() * 0.4 - 0.2);
+                const rotZ = tiltAngle;
+                
+                stk.mesh.rotation.set(0, 0, 0);
+                stk.mesh.rotateY(rotY);
+                stk.mesh.rotateZ(rotZ);
+                stk.mesh.rotateX(Math.random() * 0.2);
+
+                stk.mesh.updateMatrixWorld(true);
+                updateEndpoints(stk);
+            });
+
+            // Second pass: Relax / Settle simulation loop
+            // Run a brief pseudo-physics relaxation so overlap layers feel extremely natural
+            const iterations = 8;
+            for (let iter = 0; iter < iterations; iter++) {
+                // Collide with each other and settle down on table
+                for (let i = 0; i < sticksArray.length; i++) {
+                    const stk1 = sticksArray[i];
+                    
+                    // Collision check with floor/table surface
+                    let lowY = Math.min(stk1.p1.y, stk1.p2.y);
+                    if (lowY < tablePlane.y + stk1.radius) {
+                        const shift = (tablePlane.y + stk1.radius) - lowY;
+                        stk1.mesh.position.y += shift;
+                        updateEndpoints(stk1);
+                    }
+
+                    // Collision check with all other layers
+                    for (let j = i + 1; j < sticksArray.length; j++) {
+                        const stk2 = sticksArray[j];
+                        const res = getSegmentDistance(stk1.p1, stk1.p2, stk2.p1, stk2.p2);
+                        const limit = stk1.radius + stk2.radius + 0.01;
+
+                        if (res.distance < limit) {
+                            // Resolve overlap by nudging the top stick slightly up and bottom stick slightly down
+                            const overlap = limit - res.distance;
+                            
+                            // Determine which stick center of gravity is higher
+                            const y1 = stk1.mesh.position.y;
+                            const y2 = stk2.mesh.position.y;
+
+                            if (y1 > y2) {
+                                stk1.mesh.position.y += overlap * 0.5;
+                                stk2.mesh.position.y -= overlap * 0.5;
+                            } else {
+                                stk2.mesh.position.y += overlap * 0.5;
+                                stk1.mesh.position.y -= overlap * 0.5;
+                            }
+                            
+                            updateEndpoints(stk1);
+                            updateEndpoints(stk2);
+                        }
+                    }
+                }
+            }
+
+            // Settle final limits to make sure nothing sits underneath the surface of the table
+            sticksArray.forEach(stk => {
+                let lowY = Math.min(stk.p1.y, stk.p2.y);
+                if (lowY < tablePlane.y) {
+                    stk.mesh.position.y += (tablePlane.y - lowY) + 0.01;
+                    updateEndpoints(stk);
+                }
+                scene.add(stk.mesh);
+            });
+
+            playSound('drop');
+        }
+
+        // Recalculates end point segments after position/rotation changes
+        function updateEndpoints(stk) {
+            const length = stk.length;
+            const dir = new THREE.Vector3(0, 1, 0); // Core Cylinder local direction axis
+            dir.applyQuaternion(stk.mesh.quaternion); // Project with rotational space
+
+            stk.p1.copy(stk.mesh.position).addScaledVector(dir, -length / 2);
+            stk.p2.copy(stk.mesh.position).addScaledVector(dir, length / 2);
+        }
+
+        // Window size adjustment
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // Render tick loop
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Handles click/touch on canvas to detect target stick and trigger pickup rules
+        function onPointerDown(event) {
+            if (!gameActive || botThinking) return;
+
+            const container = document.getElementById('canvas-container');
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // Get standard visual mesh children
+            const activeMeshes = sticksArray.filter(s => s.active).map(s => s.mesh);
+            const intersects = raycaster.intersectObjects(activeMeshes);
+
+            if (intersects.length > 0) {
+                const pickedMesh = intersects[0].object;
+                const pickedId = pickedMesh.userData.id;
+                const stickObj = sticksArray.find(s => s.id === pickedId);
+                
+                if (stickObj) {
+                    processPlayerPick(stickObj);
+                }
+            }
+        }
+
+        // Evaluates if the stick can be picked up safely or if other sticks are resting on it.
+        function checkCollisionsAndBlockers(targetStick) {
+            const blockers = [];
+            
+            sticksArray.forEach(other => {
+                if (other.id === targetStick.id || !other.active) return;
+
+                // Get segment distance
+                const res = getSegmentDistance(targetStick.p1, targetStick.p2, other.p1, other.p2);
+                const collisionThreshold = targetStick.radius + other.radius + 0.05; // safe touch buffer
+
+                if (res.distance < collisionThreshold) {
+                    // Touch detected. Now check if 'other' is sitting physically above targetStick.
+                    // We compare vertical coordinate (Y) of nearest points
+                    if (res.closestPointS2.y > res.closestPointS1.y + 0.01) {
+                        blockers.push(other);
+                    }
+                }
+            });
+
+            return blockers;
+        }
+
+        // Wobbles blocking sticks physically to create satisfying tactile feedback when picking fails.
+        function wobbleSticks(blockingSticks) {
+            blockingSticks.forEach(stk => {
+                const originalRot = stk.mesh.rotation.clone();
+                const originalPos = stk.mesh.position.clone();
+
+                let t = 0;
+                const wobbleInterval = setInterval(() => {
+                    t += 0.5;
+                    const rOffset = Math.sin(t) * 0.05;
+                    const pOffset = Math.cos(t) * 0.02;
+
+                    stk.mesh.rotation.set(
+                        originalRot.x + rOffset,
+                        originalRot.y,
+                        originalRot.z + rOffset
+                    );
+                    stk.mesh.position.y = originalPos.y + pOffset;
+
+                    if (t > 10) {
+                        clearInterval(wobbleInterval);
+                        stk.mesh.rotation.copy(originalRot);
+                        stk.mesh.position.copy(originalPos);
+                        updateEndpoints(stk);
+                    }
+                }, 20);
+            });
+        }
+
+        function processPlayerPick(stick) {
+            const blockers = checkCollisionsAndBlockers(stick);
+
+            if (blockers.length === 0) {
+                // SUCCESSFUL PICK
+                animateStickRemoval(stick, true);
+                const points = stick.typeSpec.points;
+
+                if (currentMode === 'solo') {
+                    scores.player1 += points;
+                    updateScoreDisplay();
+                    announceTurn("Awesome! Picked " + stick.typeSpec.label + " (+" + points + " pts)");
+                } else {
+                    if (currentPlayer === 1) {
+                        scores.player1 += points;
+                        updateScoreDisplay();
+                        announceTurn("P1 picked " + stick.typeSpec.label + "! Keeps Turn.");
+                    } else {
+                        scores.player2 += points;
+                        updateScoreDisplay();
+                        announceTurn((currentMode === 'vs_bot' ? "Bot" : "P2") + " picked " + stick.typeSpec.label + "! Keeps Turn.");
+                    }
+                }
+
+                checkGameEnd();
+            } else {
+                // FAILED / TOUCHED OTHER STICKS
+                playSound('fail');
+                wobbleSticks(blockers);
+                
+                if (currentMode === 'solo') {
+                    soloStrikes++;
+                    updateStrikesUI();
+                    announceTurn("Stick moved! Strike recorded.");
+                    
+                    if (soloStrikes >= MAX_SOLO_STRIKES) {
+                        endGame();
+                    }
+                } else {
+                    // Turn transfers to other player
+                    currentPlayer = (currentPlayer === 1) ? 2 : 1;
+                    announceTurn(`Move Failed! Turn passed to ${currentPlayer === 1 ? 'Player 1' : (currentMode === 'vs_bot' ? 'Bot AI' : 'Player 2')}`);
+                    highlightActivePlayerCard();
+
+                    if (currentMode === 'vs_bot' && currentPlayer === 2) {
+                        triggerBotTurn();
+                    }
+                }
+            }
+        }
+
+        // Animate selected stick floating upwards to collection bin
+        function animateStickRemoval(stk, playAudio) {
+            stk.active = false;
+            if (playAudio) playSound('success');
+
+            const mesh = stk.mesh;
+            let step = 0;
+            const anim = setInterval(() => {
+                step += 0.1;
+                mesh.position.y += 0.3; // fly up
+                mesh.rotation.y += 0.2;
+                mesh.scale.subScalar(0.04); // Shrink
+
+                if (step >= 2.5) {
+                    clearInterval(anim);
+                    scene.remove(mesh);
+                }
+            }, 16);
+        }
+
+        // Intelligent search logic designed around simulated logic layers (Easy, Med, Hard)
+        function triggerBotTurn() {
+            if (!gameActive || currentMode !== 'vs_bot' || currentPlayer !== 2) return;
+            botThinking = true;
+
+            document.getElementById('game-status-bubble').classList.add('pulse-highlight');
+            announceTurn("Bot is analyzing stick pile...");
+
+            // Delay simulating CPU processing wait
+            setTimeout(() => {
+                if (!gameActive) {
+                    botThinking = false;
+                    return;
+                }
+
+                const remainingSticks = sticksArray.filter(s => s.active);
+                if (remainingSticks.length === 0) {
+                    botThinking = false;
+                    return;
+                }
+
+                // Analyze entire board configuration
+                const evaluatedSticks = remainingSticks.map(stk => {
+                    const blockers = checkCollisionsAndBlockers(stk);
+                    return {
+                        stick: stk,
+                        blockerCount: blockers.length,
+                        points: stk.typeSpec.points
+                    };
+                });
+
+                let selected = null;
+
+                if (botDifficulty === 'easy') {
+                    // Often picks randomly regardless of physical blockage, simple mistakes
+                    if (Math.random() < 0.4) {
+                        // Pick a perfectly safe stick if lucky
+                        const safeOnes = evaluatedSticks.filter(item => item.blockerCount === 0);
+                        selected = safeOnes.length > 0 ? safeOnes[Math.floor(Math.random() * safeOnes.length)].stick : remainingSticks[0];
+                    } else {
+                        // Guess randomly (highly risky!)
+                        selected = remainingSticks[Math.floor(Math.random() * remainingSticks.length)];
+                    }
+                } 
+                else if (botDifficulty === 'medium') {
+                    // Rational decision balancing safety vs rewards
+                    const safeOnes = evaluatedSticks.filter(item => item.blockerCount === 0);
+                    if (safeOnes.length > 0) {
+                        // Pick highest points free stick
+                        safeOnes.sort((a,b) => b.points - a.points);
+                        selected = safeOnes[0].stick;
+                    } else {
+                        // Take a minor risk (pick one with minimum blocks)
+                        evaluatedSticks.sort((a,b) => a.blockerCount - b.blockerCount);
+                        selected = evaluatedSticks[0].stick;
+                    }
+                } 
+                else {
+                    // HARD: Perfectly evaluates mathematical moves. Zero error algorithm.
+                    const safeOnes = evaluatedSticks.filter(item => item.blockerCount === 0);
+                    if (safeOnes.length > 0) {
+                        safeOnes.sort((a,b) => b.points - a.points);
+                        selected = safeOnes[0].stick;
+                    } else {
+                        // If everything is locked, pick stick with least blockers to play tactically
+                        evaluatedSticks.sort((a,b) => a.blockerCount - b.blockerCount);
+                        selected = evaluatedSticks[0].stick;
+                    }
+                }
+
+                // Execute selected action
+                if (selected) {
+                    document.getElementById('game-status-bubble').classList.remove('pulse-highlight');
+                    botThinking = false;
+                    processPlayerPick(selected);
+                }
+
+            }, 1800 + Math.random() * 800);
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            
+            // Highlight select menu
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons.forEach(btn => btn.classList.remove('border-amber-500', 'bg-amber-500/10'));
+            
+            // Toggle bot difficulty panel
+            const diffPanel = document.getElementById('difficulty-panel');
+            if (mode === 'vs_bot') {
+                diffPanel.classList.remove('hidden');
+            } else {
+                diffPanel.classList.add('hidden');
+            }
+        }
+
+        function setBotDifficulty(level) {
+            botDifficulty = level;
+            const levels = ['easy', 'medium', 'hard'];
+            levels.forEach(lvl => {
+                const btn = document.getElementById(`diff-${lvl}`);
+                if (lvl === level) {
+                    btn.className = "py-2 px-3 rounded-lg text-xs bg-amber-500 text-slate-950 font-bold shadow-md transition";
+                } else {
+                    btn.className = "py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-100 transition";
+                }
+            });
+        }
+
+        function toggleHowToPlay(show) {
+            const modal = document.getElementById('howto-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('p1-score').innerText = scores.player1;
+            document.getElementById('p2-score').innerText = scores.player2;
+        }
+
+        function updateStrikesUI() {
+            const strikesCont = document.getElementById('strikes-display');
+            let html = '';
+            for (let i = 0; i < MAX_SOLO_STRIKES; i++) {
+                if (i < soloStrikes) {
+                    html += '<i class="fa-solid fa-circle-xmark text-red-500 text-sm"></i>';
+                } else {
+                    html += '<i class="fa-regular fa-circle text-slate-500 text-sm"></i>';
+                }
+            }
+            strikesCont.innerHTML = html;
+        }
+
+        function highlightActivePlayerCard() {
+            const p1 = document.getElementById('p1-label').parentElement;
+            const p2 = document.getElementById('p2-score-card');
+            
+            if (currentMode === 'solo') return;
+
+            if (currentPlayer === 1) {
+                p1.classList.add('border-amber-500/60', 'bg-amber-500/10');
+                p2.classList.remove('border-blue-500/60', 'bg-blue-500/10');
+            } else {
+                p1.classList.remove('border-amber-500/60', 'bg-amber-500/10');
+                p2.classList.add('border-blue-500/60', 'bg-blue-500/10');
+            }
+        }
+
+        function announceTurn(msg) {
+            document.getElementById('turn-announcement').innerText = msg;
+        }
+
+        function startGame() {
+            // Hide main menu
+            document.getElementById('main-menu').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                document.getElementById('main-menu').classList.add('hidden');
+            }, 500);
+
+            // Re-zero stats
+            scores.player1 = 0;
+            scores.player2 = 0;
+            soloStrikes = 0;
+            currentPlayer = 1;
+            gameActive = true;
+            botThinking = false;
+
+            updateScoreDisplay();
+            updateStrikesUI();
+
+            // Match HUD config to Game Mode
+            const p2Card = document.getElementById('p2-score-card');
+            const strikesCard = document.getElementById('solo-mistakes-card');
+            
+            if (currentMode === 'solo') {
+                document.getElementById('p1-label').innerText = "Points";
+                p2Card.classList.add('hidden');
+                strikesCard.classList.remove('hidden');
+                announceTurn("Solo Mode: Pick safe sticks!");
+            } else {
+                document.getElementById('p1-label').innerText = "Player 1";
+                p2Card.classList.remove('hidden');
+                strikesCard.classList.add('hidden');
+                
+                if (currentMode === 'vs_bot') {
+                    document.getElementById('p2-label').innerText = `Bot (${botDifficulty})`;
+                } else {
+                    document.getElementById('p2-label').innerText = "Player 2";
+                }
+                
+                highlightActivePlayerCard();
+                announceTurn("Player 1's Turn");
+            }
+
+            // Fire up sticks drop
+            generateSticks();
+        }
+
+        function quitToMenu() {
+            gameActive = false;
+            botThinking = false;
+            document.getElementById('game-over-screen').classList.add('hidden');
+            
+            const mainMenu = document.getElementById('main-menu');
+            mainMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mainMenu.classList.remove('opacity-0', 'pointer-events-none');
+            }, 50);
+        }
+
+        function resetStickPile() {
+            if (!gameActive) return;
+            generateSticks();
+            announceTurn("Sticks Redropped!");
+        }
+
+        function resetGame() {
+            document.getElementById('game-over-screen').classList.add('hidden');
+            startGame();
+        }
+
+        function checkGameEnd() {
+            const remaining = sticksArray.filter(s => s.active).length;
+            if (remaining === 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            botThinking = false;
+
+            const goScreen = document.getElementById('game-over-screen');
+            goScreen.classList.remove('hidden');
+
+            document.getElementById('go-p1-score').innerText = scores.player1;
+            document.getElementById('go-p2-score').innerText = scores.player2;
+
+            const p2Row = document.getElementById('go-p2-row');
+            const verdict = document.getElementById('go-verdict');
+
+            if (currentMode === 'solo') {
+                p2Row.classList.add('hidden');
+                document.getElementById('go-p1-name').innerText = "Your Final Score";
+                
+                if (soloStrikes >= MAX_SOLO_STRIKES) {
+                    document.getElementById('go-title').innerText = "Max Strikes Reached!";
+                    verdict.innerText = "You made too many mistakes, but great try!";
+                    verdict.className = "text-lg font-bold text-red-400 mb-6";
+                } else {
+                    document.getElementById('go-title').innerText = "Victory!";
+                    verdict.innerText = `You cleared all sticks! Final score: ${scores.player1} pts.`;
+                    verdict.className = "text-lg font-bold text-emerald-400 mb-6";
+                    triggerConfetti();
+                }
+            } else {
+                p2Row.classList.remove('hidden');
+                document.getElementById('go-p1-name').innerText = "Player 1 Score";
+                
+                if (currentMode === 'vs_bot') {
+                    document.getElementById('go-p2-name').innerText = "Bot Score";
+                    if (scores.player1 > scores.player2) {
+                        document.getElementById('go-title').innerText = "Victory!";
+                        verdict.innerText = "You defeated the Bot!";
+                        verdict.className = "text-lg font-bold text-emerald-400 mb-6";
+                        triggerConfetti();
+                    } else if (scores.player1 < scores.player2) {
+                        document.getElementById('go-title').innerText = "Bot Wins!";
+                        verdict.innerText = "The virtual bot out-played you. Practice makes perfect!";
+                        verdict.className = "text-lg font-bold text-red-400 mb-6";
+                    } else {
+                        document.getElementById('go-title').innerText = "It's a Tie!";
+                        verdict.innerText = "An absolute matching scoreline!";
+                        verdict.className = "text-lg font-bold text-amber-400 mb-6";
+                    }
+                } else {
+                    document.getElementById('go-p2-name').innerText = "Player 2 Score";
+                    if (scores.player1 > scores.player2) {
+                        document.getElementById('go-title').innerText = "P1 Wins!";
+                        verdict.innerText = "Player 1 reigns supreme!";
+                        verdict.className = "text-lg font-bold text-emerald-400 mb-6";
+                        triggerConfetti();
+                    } else if (scores.player1 < scores.player2) {
+                        document.getElementById('go-title').innerText = "P2 Wins!";
+                        verdict.innerText = "Player 2 claims the crown!";
+                        verdict.className = "text-lg font-bold text-blue-400 mb-6";
+                        triggerConfetti();
+                    } else {
+                        document.getElementById('go-title').innerText = "It's a Tie!";
+                        verdict.innerText = "Both players scored perfectly equal!";
+                        verdict.className = "text-lg font-bold text-amber-400 mb-6";
+                    }
+                }
+            }
+        }
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            init3D();
+            // Start default selected mode highlight
+            selectMode('solo');
+        };
+    </script>
+</body>
+</html>

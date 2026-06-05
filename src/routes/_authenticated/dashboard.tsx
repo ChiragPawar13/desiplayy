@@ -3,7 +3,7 @@ import { useState } from "react";
 import { LogOut, Plus, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, displayNameOf } from "@/hooks/use-auth";
-import { GAMES, AVAILABLE_GAME_IDS } from "@/lib/games-data";
+import { GAMES, AVAILABLE_GAME_IDS, SOLO_GAME_IDS, SOLO_GAME_URLS } from "@/lib/games-data";
 import { createRoom, joinRoomByCode } from "@/lib/room-helpers";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -21,6 +21,10 @@ function Dashboard() {
   const name = displayNameOf(user);
 
   const handleCreate = async (gameId: string) => {
+    if (SOLO_GAME_IDS.includes(gameId)) {
+      window.location.href = SOLO_GAME_URLS[gameId];
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -102,7 +106,11 @@ function Dashboard() {
                     disabled={busy}
                     className="w-full bg-slate-800 hover:bg-amber-600 disabled:opacity-50 text-white font-bold py-2 rounded-xl flex items-center justify-center gap-2 transition-colors"
                   >
-                    <Plus size={16} /> Create Room
+                    {SOLO_GAME_IDS.includes(g.id) ? (
+                      <><ArrowRight size={16} /> Play Now</>
+                    ) : (
+                      <><Plus size={16} /> Create Room</>
+                    )}
                   </button>
                 ) : (
                   <span className="block w-full text-center text-xs text-amber-500 font-bold py-2 border border-amber-500/30 rounded-xl">COMING SOON</span>
