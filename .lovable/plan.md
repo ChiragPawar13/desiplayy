@@ -1,32 +1,36 @@
-## Remaining work
+## Goal
+Aapki site Google search results mein dikhe (sirf direct URL se nahi).
 
-RMCS + ChatBox + hooks + helpers + migration are already in place. To make the app playable end-to-end, I'll add:
+## Why it's not showing
+Google ko naye sites discover, crawl, aur index karne mein time lagta hai. Aapki site abhi tak Google ke index mein nahi hai (ya partially hai). Direct link kaam karta hai kyunki browser seedha site khol raha hai — Google ka role nahi.
 
-### 1. Game components (logic copied verbatim from your `desiplayF` file)
-- `src/components/games/SnakesGame.tsx` — dice roll, snakes/ladders map, turn order, winner detection
-- `src/components/games/TicTacToeGame.tsx` — 3×3 board, win-line detection, draw handling
-- `src/components/games/HousieGame.tsx` — auto-generated 5×5 boards, number caller, manual marking, line/full-house win
-- `src/components/games/UnoGame.tsx` — deck, hands, discard pile, wild/+2/+4/skip/reverse, color picker, direction
+## Steps
 
-Each component reads `room.game_state`, writes via `patchGameState` / `replaceGameState`.
+### 1. Sitemap aur robots.txt setup
+- `src/routes/sitemap[.]xml.ts` banayenge — saare public routes (`/`, `/auth`, `/dashboard`) include karega, `https://desiplayy.lovable.app` base URL ke saath
+- `public/robots.txt` banayenge — `Allow: /` aur `Sitemap:` directive ke saath
 
-### 2. Auth
-- `src/routes/auth.tsx` — email/password signup + login (no email confirmation; sets display name in user_metadata)
-- `src/routes/_authenticated.tsx` — pathless layout guard, redirects to `/auth` if no session
-- Wire `attachSupabaseAuth` in `src/start.ts`
+### 2. Per-route SEO metadata strengthen
+- `/auth` aur `/dashboard` route files mein `head()` add karenge with unique title + description + og tags
+- Currently sirf `/` aur root pe meta hai
 
-### 3. App routes
-- `src/routes/_authenticated/dashboard.tsx` — game picker grid (uses `GAMES`), create-room button per game, join-by-code input
-- `src/routes/_authenticated/room.$code.tsx` — lobby (player list, add-bot, start) when `status='waiting'`, switches to the right game component when `status='playing'`, embeds `ChatBox`
-- Update `src/routes/index.tsx` — keep current landing, add "Sign in to play" CTA pointing to `/auth`
+### 3. Google Search Console verification (aapko karna hoga, main guide karunga)
+- Google Search Console mein property add karein: `https://desiplayy.lovable.app`
+- Verification meta tag generate hoga
+- Main woh tag aapke `__root.tsx` ke head mein add kar dunga
+- Verify karne ke baad sitemap submit karein: `https://desiplayy.lovable.app/sitemap.xml`
+- "Request indexing" use karke pages submit karein
 
-### 4. Misc
-- Update `routeTree.gen.ts` will regenerate automatically from new route files
+### 4. Expectations set karna
+- Verification ke baad bhi Google ko **2-4 weeks** lag sakte hain pages ko rank karne mein
+- "DesiPlay" naam pe rank karne ke liye backlinks aur traffic chahiye hoga
+- Brand naam search jaise "desiplay games" — yeh pehle dikhna shuru hoga
 
-## Out of scope (confirmed earlier)
-- Lagori, Chhupan Chhupai etc. stay "SOON" — your file has no logic for them
-- Google sign-in — using email/password as previously agreed
+## What I'll need from you
+- Google Search Console pe jaake verification meta tag generate karna (ya bolo toh Google Search Console connector use karke main automate kar dunga)
 
-After this, you'll sign up → pick game → share 6-char code → friends join → all 5 games playable in realtime with chat.
-
-Confirm and I'll build it.
+## Technical notes
+- TanStack Start server route for sitemap (dynamic, route-aware)
+- robots.txt as static file in `public/`
+- Meta tags via per-route `head()` in `createFileRoute`
+- Canonical tags leaf routes pe (root pe nahi — duplicate hoga)
