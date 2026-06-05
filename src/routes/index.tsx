@@ -24,6 +24,11 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Raja Mantri, Snakes & Ladders, Housie, Desi UNO and more. Multiplayer party games with a desi twist." },
       { property: "og:title", content: "DesiPlay — Play classic Indian games with friends" },
       { property: "og:description", content: "Raja Mantri, Snakes & Ladders, Housie, Desi UNO and more. Multiplayer party games with a desi twist." },
+      { property: "og:url", content: "https://desiplayy.lovable.app/" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://desiplayy.lovable.app/" },
     ],
   }),
   component: Index,

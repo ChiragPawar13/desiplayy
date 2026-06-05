@@ -7,6 +7,13 @@ export const Route = createFileRoute("/auth")({
     meta: [
       { title: "Sign in — DesiPlay" },
       { name: "description", content: "Sign in or create an account to play DesiPlay games with friends." },
+      { property: "og:title", content: "Sign in — DesiPlay" },
+      { property: "og:description", content: "Sign in or create an account to play DesiPlay games with friends." },
+      { property: "og:url", content: "https://desiplayy.lovable.app/auth" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://desiplayy.lovable.app/auth" },
     ],
   }),
   component: AuthPage,
