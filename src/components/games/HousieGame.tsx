@@ -11,14 +11,14 @@ export function HousieGame({ room, user }: { room: RoomRow; user: User }) {
 
   if (!gameState) return <div className="p-10 text-center text-white">Loading Housie Tickets...</div>;
 
-  const myBoard: (number | "FREE")[] = gameState.boards[user.id] || [];
-  const myMarks: (number | "FREE")[] = gameState.marked?.[user.id] || [];
+  const myBoard: (number | null)[] = gameState.boards[user.id] || [];
+  const myMarks: number[] = gameState.marked?.[user.id] || [];
   const called: number[] = gameState.calledNumbers || [];
 
   const callNumber = async () => {
     if (!isHost || gameState.winner) return;
     const available = [];
-    for (let i = 1; i <= 75; i++) if (!called.includes(i)) available.push(i);
+    for (let i = 1; i <= 90; i++) if (!called.includes(i)) available.push(i);
     if (available.length === 0) return;
     const nextNum = available[Math.floor(Math.random() * available.length)];
     await replaceGameState(room.id, {
@@ -28,8 +28,8 @@ export function HousieGame({ room, user }: { room: RoomRow; user: User }) {
     });
   };
 
-  const toggleMark = async (cell: number | "FREE") => {
-    if (cell === "FREE" || gameState.winner) return;
+  const toggleMark = async (cell: number | null) => {
+    if (cell === null || gameState.winner) return;
     const newMarks = myMarks.includes(cell) ? myMarks.filter((m) => m !== cell) : [...myMarks, cell];
     await replaceGameState(room.id, {
       ...gameState,
@@ -39,44 +39,25 @@ export function HousieGame({ room, user }: { room: RoomRow; user: User }) {
 
   const claimHousie = async () => {
     if (gameState.winner) return;
-    const isMarked = (cell: number | "FREE") => myMarks.includes(cell);
-    let lines = 0;
-    for (let i = 0; i < 5; i++) {
-      let rowWin = true;
-      let colWin = true;
-      for (let j = 0; j < 5; j++) {
-        if (!isMarked(myBoard[i * 5 + j])) rowWin = false;
-        if (!isMarked(myBoard[j * 5 + i])) colWin = false;
-      }
-      if (rowWin) lines++;
-      if (colWin) lines++;
+    const ticketNumbers = myBoard.filter((c): c is number => c !== null);
+    const allMarked = ticketNumbers.every((n) => myMarks.includes(n));
+    if (!allMarked) {
+      alert("Abhi full house nahi hua bhai! Sare 15 number mark karo.");
+      return;
     }
-    let d1 = true;
-    let d2 = true;
-    for (let i = 0; i < 5; i++) {
-      if (!isMarked(myBoard[i * 5 + i])) d1 = false;
-      if (!isMarked(myBoard[i * 5 + (4 - i)])) d2 = false;
+    const invalidMarks = myMarks.filter((m) => !called.includes(m));
+    if (invalidMarks.length > 0) {
+      alert(`Bhai cheating! 🚨 Ye numbers call hi nahi huye: ${invalidMarks.join(", ")}`);
+      return;
     }
-    if (d1) lines++;
-    if (d2) lines++;
-
-    if (lines >= 5) {
-      const invalidMarks = myMarks.filter((m) => m !== "FREE" && !called.includes(m as number));
-      if (invalidMarks.length > 0) {
-        alert(`Bhai cheating! 🚨 Aapne ye numbers mark kar diye jo call hi nahi huye: ${invalidMarks.join(", ")}`);
-        return;
-      }
-      await replaceGameState(room.id, { ...gameState, winner: user.id });
-    } else {
-      alert("Abhi 5 lines puri nahi hui hain bhai! Sahi se check karo.");
-    }
+    await replaceGameState(room.id, { ...gameState, winner: user.id });
   };
 
   const playAgain = async () => {
     if (!isHost) return;
     await replaceGameState(room.id, {
-      boards: players.reduce((acc: Record<string, (number | "FREE")[]>, p) => ({ ...acc, [p.uid]: generateHousieBoard() }), {}),
-      marked: players.reduce((acc: Record<string, (number | "FREE")[]>, p) => ({ ...acc, [p.uid]: ["FREE" as const] }), {}),
+      boards: players.reduce((acc: Record<string, (number | null)[]>, p) => ({ ...acc, [p.uid]: generateHousieBoard() }), {}),
+      marked: players.reduce((acc: Record<string, number[]>, p) => ({ ...acc, [p.uid]: [] }), {}),
       calledNumbers: [],
       winner: null,
       lastCalled: null,
@@ -107,21 +88,25 @@ export function HousieGame({ room, user }: { room: RoomRow; user: User }) {
         )}
       </div>
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-full max-w-[280px] sm:max-w-sm">
-          <div className="grid grid-cols-5 gap-1 mb-1 sm:mb-2 text-center text-base sm:text-xl font-black text-rose-500">
-            <span>H</span><span>O</span><span>U</span><span>S</span><span>E</span>
-          </div>
-          <div className="grid grid-cols-5 gap-1 md:gap-2">
+        <div className="w-full max-w-[520px]">
+          <div className="grid grid-cols-9 gap-0.5 sm:gap-1 p-2 sm:p-3 bg-rose-600 rounded-xl shadow-lg">
             {myBoard.map((cell, idx) => {
-              const marked = myMarks.includes(cell);
+              const isEmpty = cell === null;
+              const marked = !isEmpty && myMarks.includes(cell as number);
               return (
                 <div
                   key={idx}
                   onClick={() => toggleMark(cell)}
-                  className={`aspect-square flex items-center justify-center rounded-md sm:rounded-lg font-bold text-sm sm:text-lg md:text-xl transition-all duration-300 relative overflow-hidden cursor-pointer ${marked ? "bg-rose-600 text-white shadow-inner scale-95 border-2 border-rose-400" : "bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700"}`}
+                  className={`aspect-square flex items-center justify-center rounded-sm sm:rounded-md font-bold text-xs sm:text-base md:text-lg transition-all duration-200 relative overflow-hidden ${
+                    isEmpty
+                      ? "bg-rose-700/40"
+                      : marked
+                      ? "bg-rose-900 text-white border border-rose-300 cursor-pointer scale-95"
+                      : "bg-white text-slate-900 hover:bg-amber-100 cursor-pointer"
+                  }`}
                 >
-                  {marked && cell !== "FREE" && <div className="absolute inset-0 bg-black/20 rounded-md sm:rounded-lg"></div>}
-                  <span className="relative z-10">{cell}</span>
+                  {!isEmpty && <span className="relative z-10">{cell}</span>}
+                  {marked && <div className="absolute inset-0 bg-black/30 rounded-sm sm:rounded-md"></div>}
                 </div>
               );
             })}
