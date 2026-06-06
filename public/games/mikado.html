@@ -887,6 +887,11 @@
                 }
 
                 checkGameEnd();
+
+                // If bot is still on its turn after a successful pick, keep playing automatically.
+                if (gameActive && currentMode === 'vs_bot' && currentPlayer === 2) {
+                    setTimeout(() => triggerBotTurn(), 900);
+                }
             } else {
                 // FAILED / TOUCHED OTHER STICKS
                 playSound('fail');
