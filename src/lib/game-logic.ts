@@ -51,7 +51,7 @@ export function generateHousieBoard(): (number | "FREE")[] {
       const num = Math.floor(Math.random() * (max - min + 1)) + min;
       if (!col.includes(num)) col.push(num);
     }
-    board.push(col);
+    board.push(col.sort((a, b) => a - b));
   }
 
   const finalBoard: (number | "FREE")[] = [];
