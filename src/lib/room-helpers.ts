@@ -102,11 +102,11 @@ export async function startGame(room: RoomRow): Promise<void> {
       isDraw: false,
     };
   } else if (room.game_id === "housie") {
-    const boards: Record<string, (number | "FREE")[]> = {};
-    const marked: Record<string, (number | "FREE")[]> = {};
+    const boards: Record<string, (number | null)[]> = {};
+    const marked: Record<string, number[]> = {};
     room.players.forEach((p) => {
       boards[p.uid] = generateHousieBoard();
-      marked[p.uid] = ["FREE"];
+      marked[p.uid] = [];
     });
     initialGameState = {
       boards,
