@@ -41,30 +41,46 @@ export const WIN_LINES = [
 ];
 
 // ============ Housie ============
-export function generateHousieBoard(): (number | "FREE")[] {
-  const board: number[][] = [];
-  for (let i = 0; i < 5; i++) {
-    const col: number[] = [];
-    const min = i * 15 + 1;
-    const max = min + 14;
-    while (col.length < 5) {
-      const num = Math.floor(Math.random() * (max - min + 1)) + min;
-      if (!col.includes(num)) col.push(num);
+// Traditional Tambola/Housie ticket: 3 rows × 9 columns, 15 numbers (5 per row).
+// Column c holds numbers in range [c*10 .. c*10+9], except col 0 = [1..9] and col 8 = [80..90].
+// Empty cells are represented as null. Numbers in each column are sorted ascending top→bottom.
+export function generateHousieBoard(): (number | null)[] {
+  const sample = <T,>(arr: T[], n: number): T[] => {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    board.push(col.sort((a, b) => a - b));
-  }
+    return copy.slice(0, n);
+  };
 
-  const finalBoard: (number | "FREE")[] = [];
-  for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < 5; col++) {
-      if (row === 2 && col === 2) {
-        finalBoard.push("FREE");
-      } else {
-        finalBoard.push(board[col][row]);
+  // Retry until column counts are all between 1 and 3.
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const rowCols: number[][] = [0, 1, 2].map(() =>
+      sample([0, 1, 2, 3, 4, 5, 6, 7, 8], 5)
+    );
+    const counts = Array(9).fill(0);
+    rowCols.forEach((cols) => cols.forEach((c) => counts[c]++));
+    if (!counts.every((c) => c >= 1 && c <= 3)) continue;
+
+    const ticket: (number | null)[] = Array(27).fill(null);
+    for (let c = 0; c < 9; c++) {
+      const min = c === 0 ? 1 : c * 10;
+      const max = c === 8 ? 90 : c * 10 + 9;
+      const pool: number[] = [];
+      for (let n = min; n <= max; n++) pool.push(n);
+      const nums = sample(pool, counts[c]).sort((a, b) => a - b);
+      let idx = 0;
+      for (let r = 0; r < 3; r++) {
+        if (rowCols[r].includes(c)) {
+          ticket[r * 9 + c] = nums[idx++];
+        }
       }
     }
+    return ticket;
   }
-  return finalBoard;
+  // Fallback (should never hit)
+  return Array(27).fill(null);
 }
 
 // ============ UNO ============
