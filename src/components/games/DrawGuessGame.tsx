@@ -306,7 +306,7 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
           >
             <canvas
               ref={canvasRef}
-              className={`w-full h-full ${amDrawer && gs.phase === "drawing" ? "cursor-crosshair" : "cursor-not-allowed"} ${scrollLocked ? "touch-none" : "touch-pan-y"}`}
+              className={`block absolute inset-0 ${amDrawer && gs.phase === "drawing" ? "cursor-crosshair" : "cursor-not-allowed"} ${scrollLocked ? "touch-none" : "touch-pan-y"}`}
               onPointerDown={startStroke}
               onPointerMove={extendStroke}
               onPointerUp={endStroke}
