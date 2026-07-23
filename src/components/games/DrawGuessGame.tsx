@@ -27,6 +27,7 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const sizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
   const [color, setColor] = useState(COLORS[0]);
   const [size, setSize] = useState(SIZES[1]);
   const [currentStroke, setCurrentStroke] = useState<DrawStroke | null>(null);
@@ -55,47 +56,74 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
     ? Math.max(0, Math.ceil((gs.roundEndAt - now) / 1000))
     : 0;
 
-  // Draw all strokes to canvas
+  // Size canvas to wrap using ResizeObserver (avoids feedback loop from re-measuring on every stroke)
   useEffect(() => {
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
-    const rect = wrap.getBoundingClientRect();
+    const resize = () => {
+      const rect = wrap.getBoundingClientRect();
+      const w = Math.floor(rect.width);
+      const h = Math.floor(rect.height);
+      if (w <= 0 || h <= 0) return;
+      if (sizeRef.current.w === w && sizeRef.current.h === h) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      sizeRef.current = { w, h };
+      redraw();
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(wrap);
+    resize();
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const redraw = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const { w, h } = sizeRef.current;
+    if (!w || !h) return;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillRect(0, 0, w, h);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-
     const drawStroke = (s: DrawStroke) => {
       if (s.pts.length === 0) return;
       ctx.strokeStyle = s.c;
       ctx.lineWidth = s.s;
       ctx.beginPath();
       const [x0, y0] = s.pts[0];
-      ctx.moveTo(x0 * rect.width, y0 * rect.height);
+      ctx.moveTo(x0 * w, y0 * h);
       for (let i = 1; i < s.pts.length; i++) {
         const [x, y] = s.pts[i];
-        ctx.lineTo(x * rect.width, y * rect.height);
+        ctx.lineTo(x * w, y * h);
       }
       if (s.pts.length === 1) {
-        // single dot
-        ctx.arc(x0 * rect.width, y0 * rect.height, s.s / 2, 0, Math.PI * 2);
+        ctx.arc(x0 * w, y0 * h, s.s / 2, 0, Math.PI * 2);
         ctx.fillStyle = s.c;
         ctx.fill();
       }
       ctx.stroke();
     };
+    (gsRef.current?.strokes as DrawStroke[] | undefined)?.forEach(drawStroke);
+    if (currentStrokeRef.current) drawStroke(currentStrokeRef.current);
+  };
 
-    (gs?.strokes as DrawStroke[] | undefined)?.forEach(drawStroke);
-    if (currentStroke) drawStroke(currentStroke);
+  // Keep refs in sync so redraw() from ResizeObserver has latest data
+  const gsRef = useRef(gs);
+  const currentStrokeRef = useRef(currentStroke);
+  useEffect(() => {
+    gsRef.current = gs;
+    currentStrokeRef.current = currentStroke;
+    redraw();
   }, [gs?.strokes, currentStroke]);
 
   // Host: advance round when time up or all guessed
