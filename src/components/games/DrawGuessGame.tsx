@@ -326,6 +326,14 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
               >
                 <Trash2 size={16} />
               </button>
+              <button
+                onClick={() => setScrollLocked((l) => !l)}
+                className={`p-2 rounded-lg flex items-center gap-1.5 text-xs font-bold ${scrollLocked ? "bg-amber-600 text-white" : "bg-slate-800 hover:bg-slate-700 text-slate-300"}`}
+                title={scrollLocked ? "Unlock scroll" : "Lock scroll while drawing"}
+              >
+                {scrollLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                <span className="hidden sm:inline">{scrollLocked ? "Scroll Locked" : "Lock Scroll"}</span>
+              </button>
             </div>
           )}
 
