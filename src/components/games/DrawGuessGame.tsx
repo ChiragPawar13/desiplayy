@@ -41,6 +41,16 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
     return () => clearInterval(id);
   }, []);
 
+  // scroll lock body when enabled
+  useEffect(() => {
+    if (!scrollLocked) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [scrollLocked]);
+
   const secondsLeft = gs?.roundEndAt
     ? Math.max(0, Math.ceil((gs.roundEndAt - now) / 1000))
     : 0;
