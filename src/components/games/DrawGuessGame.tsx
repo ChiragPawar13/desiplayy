@@ -7,7 +7,7 @@ import {
   pickDrawGuessWord,
   type DrawStroke,
 } from "@/lib/game-logic";
-import { Eraser, Trash2, Send, Palette } from "lucide-react";
+import { Eraser, Trash2, Send, Palette, Lock, Unlock } from "lucide-react";
 
 const COLORS = ["#0f172a", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#ec4899", "#ffffff"];
 const SIZES = [3, 6, 12];
