@@ -7,7 +7,7 @@ import {
   pickDrawGuessWord,
   type DrawStroke,
 } from "@/lib/game-logic";
-import { Eraser, Trash2, Send, Palette } from "lucide-react";
+import { Eraser, Trash2, Send, Palette, Lock, Unlock } from "lucide-react";
 
 const COLORS = ["#0f172a", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#ec4899", "#ffffff"];
 const SIZES = [3, 6, 12];
@@ -33,12 +33,23 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [scrollLocked, setScrollLocked] = useState(false);
 
   // tick for timer
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(id);
   }, []);
+
+  // scroll lock body when enabled
+  useEffect(() => {
+    if (!scrollLocked) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [scrollLocked]);
 
   const secondsLeft = gs?.roundEndAt
     ? Math.max(0, Math.ceil((gs.roundEndAt - now) / 1000))
@@ -263,16 +274,18 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
         <div className="flex-1 flex flex-col gap-2 min-h-0">
           <div
             ref={wrapRef}
-            className="flex-1 min-h-[280px] bg-white rounded-2xl overflow-hidden border-4 border-slate-800 relative"
+            className={`flex-1 min-h-[280px] bg-white rounded-2xl overflow-hidden border-4 border-slate-800 relative ${scrollLocked ? "touch-none" : ""}`}
           >
             <canvas
               ref={canvasRef}
-              className={`w-full h-full ${amDrawer && gs.phase === "drawing" ? "cursor-crosshair" : "cursor-not-allowed"}`}
+              className={`w-full h-full ${amDrawer && gs.phase === "drawing" ? "cursor-crosshair" : "cursor-not-allowed"} ${scrollLocked ? "touch-none" : "touch-pan-y"}`}
               onPointerDown={startStroke}
               onPointerMove={extendStroke}
               onPointerUp={endStroke}
               onPointerCancel={endStroke}
               onPointerLeave={endStroke}
+              onTouchStart={(e) => scrollLocked && e.preventDefault()}
+              onTouchMove={(e) => scrollLocked && e.preventDefault()}
             />
           </div>
 
@@ -312,6 +325,14 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
                 title="Clear"
               >
                 <Trash2 size={16} />
+              </button>
+              <button
+                onClick={() => setScrollLocked((l) => !l)}
+                className={`p-2 rounded-lg flex items-center gap-1.5 text-xs font-bold ${scrollLocked ? "bg-amber-600 text-white" : "bg-slate-800 hover:bg-slate-700 text-slate-300"}`}
+                title={scrollLocked ? "Unlock scroll" : "Lock scroll while drawing"}
+              >
+                {scrollLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                <span className="hidden sm:inline">{scrollLocked ? "Scroll Locked" : "Lock Scroll"}</span>
               </button>
             </div>
           )}
