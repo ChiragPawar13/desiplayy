@@ -12,6 +12,7 @@ import { SnakesGame } from "@/components/games/SnakesGame";
 import { TicTacToeGame } from "@/components/games/TicTacToeGame";
 import { HousieGame } from "@/components/games/HousieGame";
 import { UnoGame } from "@/components/games/UnoGame";
+import { DrawGuessGame } from "@/components/games/DrawGuessGame";
 
 export const Route = createFileRoute("/room/$code")({
   component: RoomPage,
@@ -136,6 +137,7 @@ function RoomPage() {
             {room.game_id === "tictactoe" && <TicTacToeGame room={room} user={user} />}
             {room.game_id === "housie" && <HousieGame room={room} user={user} />}
             {room.game_id === "uno" && <UnoGame room={room} user={user} />}
+            {room.game_id === "drawguess" && <DrawGuessGame room={room} user={user} />}
           </div>
           <aside className="lg:w-80 p-3 lg:p-4 shrink-0">
             <ChatBox room={room} user={user} />

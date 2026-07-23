@@ -136,3 +136,49 @@ export function generateUnoInitialState(players: Player[]) {
     log: ["Game started!"],
   };
 }
+
+// ============ Draw & Guess ============
+export const DRAW_GUESS_WORDS = [
+  "chai", "samosa", "cricket", "auto", "kite", "peacock", "tiger", "rickshaw",
+  "diya", "rangoli", "mango", "elephant", "lassi", "kurta", "sitar", "temple",
+  "taj mahal", "biryani", "monkey", "banana", "sun", "moon", "star", "cloud",
+  "tree", "house", "car", "bus", "train", "airplane", "bicycle", "boat",
+  "guitar", "drum", "flower", "fish", "snake", "ladder", "book", "clock",
+  "camera", "phone", "laptop", "pizza", "ice cream", "cake", "burger", "apple",
+  "football", "balloon", "umbrella", "glasses", "shoe", "hat", "chair", "table",
+];
+
+export const DRAW_GUESS_ROUND_SECONDS = 60;
+
+export type DrawStroke = {
+  c: string;   // color
+  s: number;   // size
+  pts: [number, number][]; // normalized 0..1
+};
+
+export function pickDrawGuessWord(exclude: string[] = []): string {
+  const pool = DRAW_GUESS_WORDS.filter((w) => !exclude.includes(w));
+  const arr = pool.length ? pool : DRAW_GUESS_WORDS;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export function generateDrawGuessInitialState(players: Player[]) {
+  const scores: Record<string, number> = {};
+  players.forEach((p) => (scores[p.uid] = 0));
+  const drawerUid = players[0].uid;
+  const word = pickDrawGuessWord();
+  return {
+    phase: "drawing" as "drawing" | "roundEnd" | "gameEnd",
+    round: 1,
+    totalRounds: players.length,
+    drawerIdx: 0,
+    drawerUid,
+    word,
+    usedWords: [word],
+    strokes: [] as DrawStroke[],
+    guessed: {} as Record<string, boolean>,
+    scores,
+    roundEndAt: Date.now() + DRAW_GUESS_ROUND_SECONDS * 1000,
+    lastWord: null as string | null,
+  };
+}
