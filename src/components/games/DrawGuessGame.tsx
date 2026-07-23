@@ -33,6 +33,7 @@ export function DrawGuessGame({ room, user }: { room: RoomRow; user: User }) {
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [scrollLocked, setScrollLocked] = useState(false);
 
   // tick for timer
   useEffect(() => {
