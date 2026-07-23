@@ -5,6 +5,7 @@ import {
   generateRMCSInitialState,
   generateHousieBoard,
   generateUnoInitialState,
+  generateDrawGuessInitialState,
 } from "@/lib/game-logic";
 
 export type RoomRow = {
@@ -120,6 +121,11 @@ export async function startGame(room: RoomRow): Promise<void> {
       throw new Error("Desi UNO requires at least 2 players.");
     }
     initialGameState = generateUnoInitialState(room.players);
+  } else if (room.game_id === "drawguess") {
+    if (room.players.length < 2) {
+      throw new Error("Draw & Guess requires at least 2 players.");
+    }
+    initialGameState = generateDrawGuessInitialState(room.players);
   }
 
   const { error } = await supabase
